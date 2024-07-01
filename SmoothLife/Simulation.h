@@ -2,7 +2,15 @@
 
 #include <string>
 #include <glm/glm.hpp>
+#include <glad/glad.h>
 #include <GLFW/glfw3.h>
+
+/*
+
+User draws to the screen by rendering to framebuffer
+the texture is then rendered onto a quad
+
+*/
 
 class Simulation
 {
@@ -40,24 +48,35 @@ private:
 		unsigned int id;
 	};
 public:
-	Simulation(const std::string& vertexShader, const std::string& fragmentShader, unsigned int resolutionX, unsigned int resolutionY);
+	Simulation(const std::string& vertexShader, const std::string& fragmentShader, unsigned int resolutionX, unsigned int resolutionY, unsigned int windowWidth, unsigned int windowHeight);
 
 	void Init();
 	void MainLoop();
 
 private:
+	void InitGLFW();
+	void InitQuad();
+	void InitRendering();
+
+private:
 	std::string vertp;
 	std::string fragp;
 
-	Shader frag;
-	Shader vert;
+	Shader frag{};
+	Shader vert{};
 
 	unsigned int resX;
 	unsigned int resY;
 
+	unsigned int width;
+	unsigned int height;
+
 	unsigned int vao = (unsigned int)-1;
 	unsigned int vbo = (unsigned int)-1;
 	unsigned int ebo = (unsigned int)-1;
+
+	unsigned int texture = (unsigned int)-1;
+	unsigned int fbo = (unsigned int)-1;
 
 	GLFWwindow* window = nullptr;
 };
