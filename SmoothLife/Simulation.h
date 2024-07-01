@@ -29,11 +29,14 @@ private:
 		1, 2, 3,
 	};
 
+	static constexpr const char* INPUT_UNIFORM = "textureIn";
+	static constexpr const char* OUTPUT_UNIFORM = "textureOut";
+
 	class Shader
 	{
 	public:
 		Shader() = default;
-		Shader(const std::string& path);
+		Shader(const char* vertexPath, const char* fragmentPath);
 
 		void Use();
 
@@ -57,13 +60,13 @@ private:
 	void InitGLFW();
 	void InitQuad();
 	void InitRendering();
+	void processInput();
 
 private:
 	std::string vertp;
 	std::string fragp;
 
-	Shader frag{};
-	Shader vert{};
+	Shader shader{};
 
 	unsigned int resX;
 	unsigned int resY;
@@ -75,8 +78,14 @@ private:
 	unsigned int vbo = (unsigned int)-1;
 	unsigned int ebo = (unsigned int)-1;
 
-	unsigned int texture = (unsigned int)-1;
+	// one texture is used for the previous timestamp while the other is the new timestamp
+	// the new one will be rendered
+	unsigned int texture0 = (unsigned int)-1;
+	unsigned int texture1 = (unsigned int)-1;
 	unsigned int fbo = (unsigned int)-1;
+
+	// switch to render texture0 (true) or texture1 (false)
+	bool render0 = false;
 
 	GLFWwindow* window = nullptr;
 };
