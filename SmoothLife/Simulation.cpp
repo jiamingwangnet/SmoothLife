@@ -28,8 +28,17 @@ void Simulation::MainLoop()
 	--> render the quad with the texture using a passthrough shader to the screen
 	*/
 
+	bool run = false;
+
 	while (!glfwWindowShouldClose(window))
 	{
+		if (run)
+		{
+			//glfwSwapBuffers(window);
+			glfwPollEvents();
+			continue;
+		}
+
 		// render offscreen
 		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 
@@ -65,6 +74,8 @@ void Simulation::MainLoop()
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
+
+		run = true;
 	}
 
 	glfwTerminate();
@@ -139,6 +150,9 @@ void Simulation::InitRendering()
 
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, resX, resY, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
 
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
@@ -159,7 +173,8 @@ void Simulation::processInput()
 		glfwSetWindowShouldClose(window, true);
 	}
 
-	if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_1) == GLFW_PRESS)
+	//if(glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_1) == GLFW_PRESS)
+	if (true)
 	{
 		double x,y;
 
