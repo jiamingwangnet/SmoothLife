@@ -6,8 +6,8 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-Simulation::Simulation(const std::string& vertexShader, const std::string& fragmentShader, const std::string& passthroughFrag, unsigned int resolutionX, unsigned int resolutionY, unsigned int windowWidth, unsigned int windowHeight)
-	: vertp{vertexShader}, fragp{fragmentShader}, passp{passthroughFrag}, resX{resolutionX}, resY{resolutionY}, width{windowWidth}, height{windowHeight}
+Simulation::Simulation(const std::string& vertexShader, const std::string& fragmentShader, const std::string& passthroughFrag, const std::string& brushFrag, unsigned int resolutionX, unsigned int resolutionY, unsigned int windowWidth, unsigned int windowHeight)
+	: vertp{vertexShader}, fragp{fragmentShader}, brushp{brushFrag}, passp{passthroughFrag}, resX{resolutionX}, resY{resolutionY}, width{windowWidth}, height{windowHeight}
 {}
 
 void Simulation::Init()
@@ -18,6 +18,7 @@ void Simulation::Init()
 
 	shader = Shader{ vertp.c_str(), fragp.c_str() };
 	passthrough = Shader{ vertp.c_str(), passp.c_str() };
+	brush = Shader{ vertp.c_str(), brushp.c_str() };
 }
 
 void Simulation::MainLoop()
@@ -32,18 +33,20 @@ void Simulation::MainLoop()
 		// render offscreen
 		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 
+		// bind texture0
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, texture0);
+
 		// drawing code here (render circles to the screen, etc):
 		// ...
 		processInput();
 		// ...
 
 		// render back to framebuffer texture with the next timestep
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, texture0);
-
 		shader.Use();
 
 		shader.SetInt(INPUT_UNIFORM, 0);
+		shader.SetVec2("resolution", (float)resX, (float)resY);
 
 		glBindVertexArray(vao);
 		glDrawElements(GL_TRIANGLES, sizeof(quadIndices), GL_UNSIGNED_INT, 0);
@@ -52,9 +55,6 @@ void Simulation::MainLoop()
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 		// render the texture on to the screen with a passthrough (new timestep)
-
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, texture0);
 
 		passthrough.Use();
 
@@ -85,6 +85,13 @@ void Simulation::InitGLFW()
 	if (window == nullptr)
 	{
 		throw std::runtime_error{ "Could not init GLFW" };
+	}
+
+	glfwMakeContextCurrent(window);
+
+	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
+	{
+		throw std::runtime_error{ "Failed to initialize GLAD" };
 	}
 
 	glViewport(0, 0, width, height);
@@ -132,8 +139,8 @@ void Simulation::InitRendering()
 
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, resX, resY, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
 
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
 	// user first draws to texture0
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture0, 0);
@@ -151,6 +158,30 @@ void Simulation::processInput()
 	{
 		glfwSetWindowShouldClose(window, true);
 	}
+
+	if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_1) == GLFW_PRESS)
+	{
+		double x,y;
+
+		glfwGetCursorPos(window, &x, &y);
+
+		std::cout << x << ' ' << y << std::endl;
+
+		DrawPixels(x,y);
+	}
+}
+
+void Simulation::DrawPixels(double x, double y)
+{
+	// test code
+
+	brush.Use();
+	brush.SetInt(INPUT_UNIFORM, 0);
+	brush.SetVec2("xy", x / (double)width, y/(double)height);
+	shader.SetVec2("resolution", (float)resX, (float)resY);
+
+	glBindVertexArray(vao);
+	glDrawElements(GL_TRIANGLES, sizeof(quadIndices), GL_UNSIGNED_INT, 0);
 }
 
 Simulation::Shader::Shader(const char* vertexPath, const char* fragmentPath)
@@ -181,7 +212,7 @@ Simulation::Shader::Shader(const char* vertexPath, const char* fragmentPath)
 	}
 	catch (const std::ifstream::failure& e)
 	{
-		std::cout << "Cannot read shader files" << std::endl;
+		std::cout << "Cannot read shader files " << e.what() << std::endl;
 	}
 
 	const char* vShaderSource = vertexSource.c_str();
@@ -263,6 +294,11 @@ void Simulation::Shader::Shader::SetVec4(const std::string& name, float f0, floa
 void Simulation::Shader::Shader::SetVec3(const std::string& name, float f0, float f1, float f2)
 {
 	glUniform3f(glGetUniformLocation(id, name.c_str()), f0, f1, f2);
+}
+
+void Simulation::Shader::Shader::SetVec2(const std::string& name, float f0, float f1)
+{
+	glUniform2f(glGetUniformLocation(id, name.c_str()), f0, f1);
 }
 
 void Simulation::Shader::Shader::SetMat4(const std::string& name, glm::mat4& mat)
