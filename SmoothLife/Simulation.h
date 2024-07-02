@@ -30,7 +30,6 @@ private:
 	};
 
 	static constexpr const char* INPUT_UNIFORM = "textureIn";
-	static constexpr const char* OUTPUT_UNIFORM = "textureOut";
 
 	class Shader
 	{
@@ -51,7 +50,7 @@ private:
 		unsigned int id;
 	};
 public:
-	Simulation(const std::string& vertexShader, const std::string& fragmentShader, unsigned int resolutionX, unsigned int resolutionY, unsigned int windowWidth, unsigned int windowHeight);
+	Simulation(const std::string& vertexShader, const std::string& fragmentShader, const std::string& passthroughFrag, unsigned int resolutionX, unsigned int resolutionY, unsigned int windowWidth, unsigned int windowHeight);
 
 	void Init();
 	void MainLoop();
@@ -65,8 +64,10 @@ private:
 private:
 	std::string vertp;
 	std::string fragp;
+	std::string passp;
 
 	Shader shader{};
+	Shader passthrough{};
 
 	unsigned int resX;
 	unsigned int resY;
@@ -78,14 +79,9 @@ private:
 	unsigned int vbo = (unsigned int)-1;
 	unsigned int ebo = (unsigned int)-1;
 
-	// one texture is used for the previous timestamp while the other is the new timestamp
-	// the new one will be rendered
+	// render to texture to draw -> pass to shader for calculation -> render to quad -> render quad back to texture
 	unsigned int texture0 = (unsigned int)-1;
-	unsigned int texture1 = (unsigned int)-1;
 	unsigned int fbo = (unsigned int)-1;
-
-	// switch to render texture0 (true) or texture1 (false)
-	bool render0 = false;
 
 	GLFWwindow* window = nullptr;
 };
