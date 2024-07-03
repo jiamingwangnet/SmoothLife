@@ -28,17 +28,10 @@ void Simulation::MainLoop()
 	--> render the quad with the texture using a passthrough shader to the screen
 	*/
 
-	bool run = false;
+	//glDepthFunc(GL_ALWAYS);
 
 	while (!glfwWindowShouldClose(window))
 	{
-		if (run)
-		{
-			//glfwSwapBuffers(window);
-			glfwPollEvents();
-			continue;
-		}
-
 		// render offscreen
 		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 
@@ -58,10 +51,12 @@ void Simulation::MainLoop()
 		shader.SetVec2("resolution", (float)resX, (float)resY);
 
 		glBindVertexArray(vao);
-		glDrawElements(GL_TRIANGLES, sizeof(quadIndices), GL_UNSIGNED_INT, 0);
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
 		// render onscreen
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+		glDisable(GL_DEPTH_TEST);
 
 		// render the texture on to the screen with a passthrough (new timestep)
 
@@ -70,12 +65,10 @@ void Simulation::MainLoop()
 		passthrough.SetInt(INPUT_UNIFORM, 0);
 
 		glBindVertexArray(vao);
-		glDrawElements(GL_TRIANGLES, sizeof(quadIndices), GL_UNSIGNED_INT, 0);
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
-
-		run = true;
 	}
 
 	glfwTerminate();
@@ -156,10 +149,14 @@ void Simulation::InitRendering()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-	// user first draws to texture0
+	// user draws to texture0
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture0, 0);
 
-	// stencil and depth is not needed
+	// TODO: REMOVE
+	glGenRenderbuffers(1, &rbo);
+	glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, resX, resY);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rbo);
 
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) throw std::runtime_error{ "Framebuffer is not complete" };
 
@@ -173,8 +170,8 @@ void Simulation::processInput()
 		glfwSetWindowShouldClose(window, true);
 	}
 
-	//if(glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_1) == GLFW_PRESS)
-	if (true)
+	if(glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_1) == GLFW_PRESS)
+	//if (true)
 	{
 		double x,y;
 
@@ -193,10 +190,11 @@ void Simulation::DrawPixels(double x, double y)
 	brush.Use();
 	brush.SetInt(INPUT_UNIFORM, 0);
 	brush.SetVec2("xy", x / (double)width, y/(double)height);
-	shader.SetVec2("resolution", (float)resX, (float)resY);
+	brush.SetVec2("resolution", (float)resX, (float)resY);
+	brush.SetFloat("depth", 1.0f);
 
 	glBindVertexArray(vao);
-	glDrawElements(GL_TRIANGLES, sizeof(quadIndices), GL_UNSIGNED_INT, 0);
+	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 }
 
 Simulation::Shader::Shader(const char* vertexPath, const char* fragmentPath)

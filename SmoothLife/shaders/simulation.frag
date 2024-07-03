@@ -10,8 +10,8 @@ uniform vec2 resolution;
 const float PI = 3.14159265;
 
 // banding occurs when even numbers are used??
-const float kInnerR = 3.0;
-const float kOuterR = 13.0;
+const float kInnerR = 4.0;
+const float kOuterR = 14.0;
 
 float lerp(float a, float b, float f)
 {
@@ -20,12 +20,12 @@ float lerp(float a, float b, float f)
 
 float newState(float kisum, float kosum)
 {
-	/*if(kisum >= 0.5 && 0.26 <= kosum && kosum <= 0.46)
+	if(kisum >= 0.5 && 0.26 <= kosum && kosum <= 0.46)
 		return lerp(0.8, 1.0, kosum * kisum);
 	if(kisum < 0.5 && 0.27 <= kosum && kosum <= 0.36)
 		return lerp(0.8, 1.0, kosum * kisum);
 
-	return lerp(0.0, 0.1, kosum * kisum);*/
+	return lerp(0.0, 0.1, kosum * kisum);
 
 	
 	/*if(kisum >= 0.5 && 0.26 <= kosum && kosum <= 0.46)
@@ -35,10 +35,12 @@ float newState(float kisum, float kosum)
 
 	return 0.0;*/
 
-	return kisum;
+	/*if(kisum >= 0.5 && kosum >= 0.2 && kosum <= 0.4)
+		return 0.0;
+	if(kisum < 0.5 && kosum >= 0.2 && kosum <= 0.4)
+		return 1.0;
 
-	if(kisum > 0.5) return 1.0;
-	if(kisum <= 0.5) return 0.0;
+	return 0.0;*/
 }
 
 float convolve(float rad)
@@ -73,10 +75,16 @@ void main()
 	kisum /= PI * kInnerR * kInnerR;
 	kosum /= PI * kOuterR * kOuterR;
 
+	float tet = 1/(PI * kOuterR * kOuterR);
+
+	float kosum2 = convolve(kOuterR) * 0.002;
+
 
 	float state = newState(kisum, kosum);
-	FragColor = vec4(state,state,state,1.0);
+	//FragColor = vec4(state,state,state,1.0);
 	//FragColor = vec4(state,kisum,kosum,1.0);
+
+	FragColor = vec4(1.0,kosum2,0.0,1.0);
 
 	// FragColor = vec4(pos.x / resolution.x, pos.y / resolution.y, 0.0, 1.0);
 }

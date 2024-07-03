@@ -23,7 +23,7 @@ private:
 	   -1.0f,  1.0f,	0.0f, 1.0f,// top left 
 	};
 
-	static constexpr int quadIndices[] =
+	static constexpr unsigned int quadIndices[] =
 	{
 		0, 1, 3,
 		1, 2, 3,
@@ -87,6 +87,7 @@ private:
 	// render to texture to draw -> pass to shader for calculation -> render to quad -> render quad back to texture
 	unsigned int texture0 = (unsigned int)-1;
 	unsigned int fbo = (unsigned int)-1;
+	unsigned int rbo = (unsigned int)-1;
 
 	GLFWwindow* window = nullptr;
 };
