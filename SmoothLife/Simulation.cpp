@@ -47,6 +47,9 @@ void Simulation::MainLoop()
 		Render texture1 to screen
 	*/
 
+	float invResX = 1.0f / float(resX);
+	float invResY = 1.0f / float(resY);
+
 	while (!glfwWindowShouldClose(window))
 	{
 		glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
@@ -71,6 +74,7 @@ void Simulation::MainLoop()
 
 		shader.SetInt(INPUT_UNIFORM, 0);
 		shader.SetVec2("resolution", (float)resX, (float)resY);
+		shader.SetVec2("invResolution", (float)invResX, (float)invResY);
 
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 

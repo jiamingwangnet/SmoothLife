@@ -6,6 +6,7 @@ in vec2 uv;
 
 uniform sampler2D textureIn;
 uniform vec2 resolution;
+uniform vec2 invResolution;
 
 const float PI = 3.14159265;
 
@@ -38,18 +39,14 @@ float convolve(float rad)
 {
 	float res = 0.0;
 
-	int irad = int(rad);
-
-	vec2 invres = 1.0/resolution;
-
-	for(int y = -irad; y <= irad; y++)
+	for(float y = -rad; y <= rad; y++)
 	{
-		for(int x = -irad; x <= irad; x++)
+		for(float x = -rad; x <= rad; x++)
 		{
 			if(x * x + y * y <= rad * rad)
 			{
-				vec2 d = vec2(float(x), float(y));
-				vec2 offset = d * invres;
+				vec2 d = vec2(x, y);
+				vec2 offset = d * invResolution;
 				vec2 spos = fract(uv + offset);
 
 				res += texture(textureIn, spos).r;
@@ -73,4 +70,5 @@ void main()
 	float state = newState(kisum, kosum);
 	//FragColor = vec4(state,state,state,1.0);
 	FragColor = vec4(state,kisum,kosum,1.0);
+	//FragColor = vec4(state,kisum*state,kosum*state,1.0);
 }
