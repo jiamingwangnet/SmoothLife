@@ -84,10 +84,10 @@ private:
 	unsigned int vbo = (unsigned int)-1;
 	unsigned int ebo = (unsigned int)-1;
 
-	// render to texture to draw -> pass to shader for calculation -> render to quad -> render quad back to texture
 	unsigned int texture0 = (unsigned int)-1;
 	unsigned int fbo = (unsigned int)-1;
-	unsigned int rbo = (unsigned int)-1;
+	unsigned int fbo2 = (unsigned int)-1;
+	unsigned int texture1 = (unsigned int)-1;
 
 	GLFWwindow* window = nullptr;
 };

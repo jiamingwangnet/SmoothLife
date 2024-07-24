@@ -5,6 +5,8 @@
 #include <iostream>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <algorithm>
+
 
 Simulation::Simulation(const std::string& vertexShader, const std::string& fragmentShader, const std::string& passthroughFrag, const std::string& brushFrag, unsigned int resolutionX, unsigned int resolutionY, unsigned int windowWidth, unsigned int windowHeight)
 	: vertp{vertexShader}, fragp{fragmentShader}, brushp{brushFrag}, passp{passthroughFrag}, resX{resolutionX}, resY{resolutionY}, width{windowWidth}, height{windowHeight}
@@ -23,48 +25,74 @@ void Simulation::Init()
 
 void Simulation::MainLoop()
 {
-	/*
-	Draw to offscreen framebuffer for input --> use texture in fragment shader for input and render quad back to texture
-	--> render the quad with the texture using a passthrough shader to the screen
-	*/
+	glBindVertexArray(vao);
 
-	//glDepthFunc(GL_ALWAYS);
+	// bind texture0
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, texture0);
+
+	// bind texutre1
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, texture1);
+
+	glDisable(GL_DEPTH_TEST);
+
+	/*
+		Render user input to texture0
+			V
+		Use user input to render next timestep to texture1
+			V
+		Render next timestep (texture1) back to texture0
+			V
+		Render texture1 to screen
+	*/
 
 	while (!glfwWindowShouldClose(window))
 	{
-		// render offscreen
-		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+		glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+		glClear(GL_COLOR_BUFFER_BIT);
 
-		// bind texture0
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, texture0);
+		// render offscreen
+		// render to first fbo
+		glBindFramebuffer(GL_FRAMEBUFFER, fbo); // rendering to the same framebuffer creates artifacts
 
 		// drawing code here (render circles to the screen, etc):
 		// ...
 		processInput();
 		// ...
 
-		// render back to framebuffer texture with the next timestep
+		 //glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+		// render to second framebuffer with next timestep
+		glActiveTexture(GL_TEXTURE0);
+		glBindFramebuffer(GL_FRAMEBUFFER, fbo2);
+
 		shader.Use();
 
 		shader.SetInt(INPUT_UNIFORM, 0);
 		shader.SetVec2("resolution", (float)resX, (float)resY);
 
-		glBindVertexArray(vao);
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+		// store the calculated timestep to texture0
+		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+		glActiveTexture(GL_TEXTURE1);
+
+		passthrough.Use();
+		passthrough.SetInt(INPUT_UNIFORM, 1);
+
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
 		// render onscreen
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-		glDisable(GL_DEPTH_TEST);
-
 		// render the texture on to the screen with a passthrough (new timestep)
+		// render texture1 (next timestep) to screen
 
 		passthrough.Use();
 
-		passthrough.SetInt(INPUT_UNIFORM, 0);
+		passthrough.SetInt(INPUT_UNIFORM, 1);
 
-		glBindVertexArray(vao);
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
 		glfwSwapBuffers(window);
@@ -141,7 +169,8 @@ void Simulation::InitRendering()
 	glGenTextures(1, &texture0);
 	glBindTexture(GL_TEXTURE_2D, texture0);
 
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, resX, resY, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, resX, resY, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -152,13 +181,26 @@ void Simulation::InitRendering()
 	// user draws to texture0
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture0, 0);
 
-	// TODO: REMOVE
-	glGenRenderbuffers(1, &rbo);
-	glBindRenderbuffer(GL_RENDERBUFFER, rbo);
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, resX, resY);
-	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rbo);
-
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) throw std::runtime_error{ "Framebuffer is not complete" };
+
+	// Output to fbo2
+	glGenFramebuffers(1, &fbo2);
+	glBindFramebuffer(GL_FRAMEBUFFER, fbo2);
+
+	glGenTextures(1, &texture1);
+	glBindTexture(GL_TEXTURE_2D, texture1);
+
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, resX, resY, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture1, 0);
+
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) throw std::runtime_error{ "Framebuffer 2 is not complete" };
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
@@ -180,6 +222,7 @@ void Simulation::processInput()
 		std::cout << x << ' ' << y << std::endl;
 
 		DrawPixels(x,y);
+		//DrawPixels(width/2.0,height/2.0);
 	}
 }
 
@@ -193,7 +236,6 @@ void Simulation::DrawPixels(double x, double y)
 	brush.SetVec2("resolution", (float)resX, (float)resY);
 	brush.SetFloat("depth", 1.0f);
 
-	glBindVertexArray(vao);
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 }
 
