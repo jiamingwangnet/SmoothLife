@@ -46,5 +46,8 @@
     <None Include="shaders\brush.frag">
       <Filter>Shader Files</Filter>
     </None>
+    <None Include="shaders\simulation.vert">
+      <Filter>Shader Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

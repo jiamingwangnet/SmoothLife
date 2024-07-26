@@ -51,7 +51,7 @@ private:
 		unsigned int id;
 	};
 public:
-	Simulation(const std::string& vertexShader, const std::string& fragmentShader, const std::string& passthroughFrag, const std::string& brushFrag, unsigned int resolutionX, unsigned int resolutionY, unsigned int windowWidth, unsigned int windowHeight);
+	Simulation(const std::string& vertexShader, const std::string& simVertShader, const std::string& fragmentShader, const std::string& passthroughFrag, const std::string& brushFrag, unsigned int resolutionX, unsigned int resolutionY, unsigned int windowWidth, unsigned int windowHeight);
 
 	void Init();
 	void MainLoop();
@@ -69,6 +69,7 @@ private:
 	std::string fragp;
 	std::string passp;
 	std::string brushp;
+	std::string simvp;
 
 	Shader shader{};
 	Shader passthrough{};

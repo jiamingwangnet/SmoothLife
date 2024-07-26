@@ -151,6 +151,7 @@
     <None Include="shaders\default.vert" />
     <None Include="shaders\passthrough.frag" />
     <None Include="shaders\simulation.frag" />
+    <None Include="shaders\simulation.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -8,8 +8,8 @@
 #include <algorithm>
 
 
-Simulation::Simulation(const std::string& vertexShader, const std::string& fragmentShader, const std::string& passthroughFrag, const std::string& brushFrag, unsigned int resolutionX, unsigned int resolutionY, unsigned int windowWidth, unsigned int windowHeight)
-	: vertp{vertexShader}, fragp{fragmentShader}, brushp{brushFrag}, passp{passthroughFrag}, resX{resolutionX}, resY{resolutionY}, width{windowWidth}, height{windowHeight}
+Simulation::Simulation(const std::string& vertexShader, const std::string& simVertShader, const std::string& fragmentShader, const std::string& passthroughFrag, const std::string& brushFrag, unsigned int resolutionX, unsigned int resolutionY, unsigned int windowWidth, unsigned int windowHeight)
+	: vertp{vertexShader}, fragp{fragmentShader}, brushp{brushFrag}, simvp{simVertShader}, passp{passthroughFrag}, resX{resolutionX}, resY{resolutionY}, width{windowWidth}, height{windowHeight}
 {}
 
 void Simulation::Init()
@@ -18,7 +18,7 @@ void Simulation::Init()
 	InitQuad();
 	InitRendering();
 
-	shader = Shader{ vertp.c_str(), fragp.c_str() };
+	shader = Shader{ simvp.c_str(), fragp.c_str() };
 	passthrough = Shader{ vertp.c_str(), passp.c_str() };
 	brush = Shader{ vertp.c_str(), brushp.c_str() };
 }
@@ -75,6 +75,9 @@ void Simulation::MainLoop()
 		shader.SetInt(INPUT_UNIFORM, 0);
 		shader.SetVec2("resolution", (float)resX, (float)resY);
 		shader.SetVec2("invResolution", (float)invResX, (float)invResY);
+
+		shader.SetFloat("ri", 3.0f); // inner radius
+		shader.SetFloat("ra", 10.0f); // outer radius
 
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
