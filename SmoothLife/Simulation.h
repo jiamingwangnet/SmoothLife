@@ -4,6 +4,10 @@
 #include <glm/glm.hpp>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
+#include "imgui_stdlib.h"
 
 /*
 
@@ -50,6 +54,30 @@ private:
 	private:
 		unsigned int id;
 	};
+
+	struct Uniforms;
+	class GUIHandler
+	{
+	public:
+		GUIHandler() = default;
+		GUIHandler(GLFWwindow* window, Uniforms& uniforms);
+		GUIHandler(Uniforms& uniforms);
+
+		void Init();
+		void RenderStart();
+		void CreateGui();
+		void RenderEnd();
+		void Shutdown();
+
+		void SetWindow(GLFWwindow* window) { this->window = window; }
+		ImGuiIO* GetIO() const { return io; }
+
+	private:
+		GLFWwindow* window;
+		Uniforms& uniforms;
+		ImGuiIO* io = nullptr;
+	} gui;
+
 public:
 	Simulation(const std::string& vertexShader, const std::string& simVertShader, const std::string& fragmentShader, const std::string& passthroughFrag, const std::string& brushFrag, unsigned int resolutionX, unsigned int resolutionY, unsigned int windowWidth, unsigned int windowHeight);
 
@@ -63,6 +91,23 @@ private:
 	void processInput();
 
 	void DrawPixels(double x, double y);
+
+private:
+	struct Uniforms
+	{
+		float ri = 3.0f;
+		float ra = 13.0f;
+
+		float dt = 0.4f;
+
+		float alpha_m = 0.147f;
+		float alpha_n = 0.028f;
+
+		float b1 = 0.261f;
+		float b2 = 0.312f;
+		float d1 = 0.327f;
+		float d2 = 0.544f;
+	} uniforms;
 
 private:
 	std::string vertp;

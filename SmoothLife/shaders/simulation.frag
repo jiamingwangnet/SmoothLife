@@ -18,19 +18,19 @@ uniform float ra; // outer radius
 
 const float PI = 3.14159265;
 
-const float dt = 0.2;
+uniform float dt;
 
 // width of the step
-const float alpha_m = 0.147;
-const float alpha_n = 0.028;
+uniform float alpha_m;
+uniform float alpha_n;
 
 // birth and death intervals
 // [b1, b2] birth
 // [d1, d2] death
-const float b1 = 0.257;
-const float b2 = 0.336;
-const float d1 = 0.365;
-const float d2 = 0.549;
+uniform float b1;
+uniform float b2;
+uniform float d1;
+uniform float d2;
 
 // use smooth step sigmoid functions
 

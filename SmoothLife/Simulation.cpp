@@ -7,9 +7,8 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <algorithm>
 
-
 Simulation::Simulation(const std::string& vertexShader, const std::string& simVertShader, const std::string& fragmentShader, const std::string& passthroughFrag, const std::string& brushFrag, unsigned int resolutionX, unsigned int resolutionY, unsigned int windowWidth, unsigned int windowHeight)
-	: vertp{vertexShader}, fragp{fragmentShader}, brushp{brushFrag}, simvp{simVertShader}, passp{passthroughFrag}, resX{resolutionX}, resY{resolutionY}, width{windowWidth}, height{windowHeight}
+	: gui{uniforms}, vertp{vertexShader}, fragp{fragmentShader}, brushp{brushFrag}, simvp{simVertShader}, passp{passthroughFrag}, resX{resolutionX}, resY{resolutionY}, width{windowWidth}, height{windowHeight}
 {}
 
 void Simulation::Init()
@@ -21,6 +20,9 @@ void Simulation::Init()
 	shader = Shader{ simvp.c_str(), fragp.c_str() };
 	passthrough = Shader{ vertp.c_str(), passp.c_str() };
 	brush = Shader{ vertp.c_str(), brushp.c_str() };
+
+	gui.SetWindow(window);
+	gui.Init();
 }
 
 void Simulation::MainLoop()
@@ -52,6 +54,7 @@ void Simulation::MainLoop()
 
 	while (!glfwWindowShouldClose(window))
 	{
+		gui.RenderStart();
 		glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
@@ -76,8 +79,16 @@ void Simulation::MainLoop()
 		shader.SetVec2("resolution", (float)resX, (float)resY);
 		shader.SetVec2("invResolution", (float)invResX, (float)invResY);
 
-		shader.SetFloat("ri", 3.0f); // inner radius
-		shader.SetFloat("ra", 10.0f); // outer radius
+		shader.SetFloat("ri",		uniforms.ri); // inner radius
+		shader.SetFloat("ra",		uniforms.ra); // outer radius
+
+		shader.SetFloat("dt",		uniforms.dt);
+		shader.SetFloat("alpha_m",  uniforms.alpha_m);
+		shader.SetFloat("alpha_n",  uniforms.alpha_n);
+		shader.SetFloat("b1",		uniforms.b1);
+		shader.SetFloat("b2",		uniforms.b2);
+		shader.SetFloat("d1",		uniforms.d1);
+		shader.SetFloat("d2",		uniforms.d2);
 
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
@@ -93,6 +104,8 @@ void Simulation::MainLoop()
 		// render onscreen
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+		gui.CreateGui();
+
 		// render the texture on to the screen with a passthrough (new timestep)
 		// render texture1 (next timestep) to screen
 
@@ -102,6 +115,7 @@ void Simulation::MainLoop()
 
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
+		gui.RenderEnd();
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
@@ -219,14 +233,14 @@ void Simulation::processInput()
 		glfwSetWindowShouldClose(window, true);
 	}
 
-	if(glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_1) == GLFW_PRESS)
+	if(glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_1) == GLFW_PRESS && !(gui.GetIO()->WantCaptureMouse))
 	//if (true)
 	{
 		double x,y;
 
 		glfwGetCursorPos(window, &x, &y);
 
-		std::cout << x << ' ' << y << std::endl;
+		//std::cout << x << ' ' << y << std::endl;
 
 		DrawPixels(x,y);
 		//DrawPixels(width/2.0,height/2.0);
@@ -366,4 +380,59 @@ void Simulation::Shader::Shader::SetVec2(const std::string& name, float f0, floa
 void Simulation::Shader::Shader::SetMat4(const std::string& name, glm::mat4& mat)
 {
 	glUniformMatrix4fv(glGetUniformLocation(id, name.c_str()), 1, GL_FALSE, glm::value_ptr(mat));
+}
+
+Simulation::GUIHandler::GUIHandler(GLFWwindow* window, Uniforms& uniforms)
+	: window{window}, uniforms{uniforms}
+{}
+
+Simulation::GUIHandler::GUIHandler(Uniforms & uniforms)
+	: uniforms{uniforms}, window{nullptr}
+{}
+
+void Simulation::GUIHandler::Init()
+{
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+
+	io = &ImGui::GetIO();
+	io->ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+
+	ImGui_ImplGlfw_InitForOpenGL(window, true);
+	ImGui_ImplOpenGL3_Init("#version 330");
+}
+
+void Simulation::GUIHandler::RenderStart()
+{
+	ImGui_ImplOpenGL3_NewFrame();
+	ImGui_ImplGlfw_NewFrame();
+	ImGui::NewFrame();
+}
+
+void Simulation::GUIHandler::CreateGui()
+{
+	ImGui::Begin("Properties");
+	ImGui::InputFloat("ri", &uniforms.ri, 0.001, 0.1);
+	ImGui::InputFloat("ra", &uniforms.ra, 0.001, 0.1);
+	ImGui::InputFloat("dt", &uniforms.dt, 0.001, 0.1);
+	ImGui::InputFloat("alpha_n", &uniforms.alpha_n, 0.001, 0.1);
+	ImGui::InputFloat("alpha_m", &uniforms.alpha_m, 0.001, 0.1);
+	ImGui::InputFloat("b1", &uniforms.b1, 0.001, 0.1);
+	ImGui::InputFloat("b2", &uniforms.b2, 0.001, 0.1);
+	ImGui::InputFloat("d1", &uniforms.d1, 0.001, 0.1);
+	ImGui::InputFloat("d2", &uniforms.d2, 0.001, 0.1);
+	ImGui::End();
+}
+
+void Simulation::GUIHandler::RenderEnd()
+{
+	ImGui::Render();
+	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+}
+
+void Simulation::GUIHandler::Shutdown()
+{
+	ImGui_ImplOpenGL3_Shutdown();
+	ImGui_ImplGlfw_Shutdown();
+	ImGui::DestroyContext();
 }
