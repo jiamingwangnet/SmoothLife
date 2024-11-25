@@ -8,8 +8,8 @@ uniform sampler2D textureIn;
 uniform vec2 xy;
 uniform vec2 resolution;
 
-const float r =  30;
-const float ir =  15;
+const float r =  25;
+const float ir =  8;
 
 const float value = .4;
 

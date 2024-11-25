@@ -41,14 +41,16 @@ private:
 		Shader() = default;
 		Shader(const char* vertexPath, const char* fragmentPath);
 
-		void Use();
+		unsigned int GetId() const;
+
+		void Use() const;
 
 		void SetBool(const std::string& name, bool value) const;
 		void SetInt(const std::string& name, int value) const;
 		void SetFloat(const std::string& name, float value) const;
-		void SetVec2(const std::string& name, float f0, float f1);
-		void SetVec4(const std::string& name, float f0, float f1, float f2, float f3);
-		void SetVec3(const std::string& name, float f0, float f1, float f2);
+		void SetVec2(const std::string& name, float f0, float f1) const;
+		void SetVec4(const std::string& name, float f0, float f1, float f2, float f3) const;
+		void SetVec3(const std::string& name, float f0, float f1, float f2) const;
 		void SetMat4(const std::string& name, glm::mat4& mat);
 
 	private:
@@ -60,8 +62,8 @@ private:
 	{
 	public:
 		GUIHandler() = default;
-		GUIHandler(GLFWwindow* window, Uniforms& uniforms);
-		GUIHandler(Uniforms& uniforms);
+		GUIHandler(GLFWwindow* window, Uniforms& uniforms, glm::vec3& color);
+		GUIHandler(Uniforms& uniforms, glm::vec3& color);
 
 		void Init();
 		void RenderStart();
@@ -75,6 +77,7 @@ private:
 	private:
 		GLFWwindow* window;
 		Uniforms& uniforms;
+		glm::vec3& color;
 		ImGuiIO* io = nullptr;
 	} gui;
 
@@ -97,17 +100,18 @@ private:
 	{
 		float ri = 3.0f;
 		float ra = 13.0f;
-
 		float dt = 0.4f;
-
 		float alpha_m = 0.147f;
-		float alpha_n = 0.028f;
 
+		float alpha_n = 0.028f;
 		float b1 = 0.261f;
 		float b2 = 0.312f;
 		float d1 = 0.327f;
+
 		float d2 = 0.544f;
 	} uniforms;
+
+	glm::vec3 color{ 92.0f/255.0f ,176.0f / 255.0f ,255.0f / 255.0f };
 
 private:
 	std::string vertp;
@@ -134,6 +138,8 @@ private:
 	unsigned int fbo = (unsigned int)-1;
 	unsigned int fbo2 = (unsigned int)-1;
 	unsigned int texture1 = (unsigned int)-1;
+
+	unsigned int ubo = (unsigned int)-1;
 
 	GLFWwindow* window = nullptr;
 };

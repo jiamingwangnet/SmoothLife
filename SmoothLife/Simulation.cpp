@@ -8,7 +8,7 @@
 #include <algorithm>
 
 Simulation::Simulation(const std::string& vertexShader, const std::string& simVertShader, const std::string& fragmentShader, const std::string& passthroughFrag, const std::string& brushFrag, unsigned int resolutionX, unsigned int resolutionY, unsigned int windowWidth, unsigned int windowHeight)
-	: gui{uniforms}, vertp{vertexShader}, fragp{fragmentShader}, brushp{brushFrag}, simvp{simVertShader}, passp{passthroughFrag}, resX{resolutionX}, resY{resolutionY}, width{windowWidth}, height{windowHeight}
+	: gui{uniforms, color}, vertp{vertexShader}, fragp{fragmentShader}, brushp{brushFrag}, simvp{simVertShader}, passp{passthroughFrag}, resX{resolutionX}, resY{resolutionY}, width{windowWidth}, height{windowHeight}
 {}
 
 void Simulation::Init()
@@ -23,6 +23,16 @@ void Simulation::Init()
 
 	gui.SetWindow(window);
 	gui.Init();
+
+	// generate UBO and bind
+
+	glGenBuffers(1, &ubo);
+	glBindBuffer(GL_UNIFORM_BUFFER, ubo);
+	glBufferData(GL_UNIFORM_BUFFER, sizeof(Uniforms), &uniforms, GL_STATIC_DRAW);
+	glBindBufferBase(GL_UNIFORM_BUFFER, 0, ubo);
+
+	unsigned int bufferIdx = glGetUniformBlockIndex(shader.GetId(), "SimData");
+	glUniformBlockBinding(shader.GetId(), bufferIdx, 0);
 }
 
 void Simulation::MainLoop()
@@ -52,6 +62,14 @@ void Simulation::MainLoop()
 	float invResX = 1.0f / float(resX);
 	float invResY = 1.0f / float(resY);
 
+	shader.Use();
+	shader.SetInt(INPUT_UNIFORM, 0);
+	shader.SetVec2("resolution", (float)resX, (float)resY);
+	shader.SetVec2("invResolution", (float)invResX, (float)invResY);
+
+	passthrough.Use();
+	passthrough.SetInt(INPUT_UNIFORM, 1);
+
 	while (!glfwWindowShouldClose(window))
 	{
 		gui.RenderStart();
@@ -74,21 +92,7 @@ void Simulation::MainLoop()
 		glBindFramebuffer(GL_FRAMEBUFFER, fbo2);
 
 		shader.Use();
-
-		shader.SetInt(INPUT_UNIFORM, 0);
-		shader.SetVec2("resolution", (float)resX, (float)resY);
-		shader.SetVec2("invResolution", (float)invResX, (float)invResY);
-
-		shader.SetFloat("ri",		uniforms.ri); // inner radius
-		shader.SetFloat("ra",		uniforms.ra); // outer radius
-
-		shader.SetFloat("dt",		uniforms.dt);
-		shader.SetFloat("alpha_m",  uniforms.alpha_m);
-		shader.SetFloat("alpha_n",  uniforms.alpha_n);
-		shader.SetFloat("b1",		uniforms.b1);
-		shader.SetFloat("b2",		uniforms.b2);
-		shader.SetFloat("d1",		uniforms.d1);
-		shader.SetFloat("d2",		uniforms.d2);
+		shader.SetVec3("color", color.x, color.y, color.z );
 
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
@@ -97,7 +101,6 @@ void Simulation::MainLoop()
 		glActiveTexture(GL_TEXTURE1);
 
 		passthrough.Use();
-		passthrough.SetInt(INPUT_UNIFORM, 1);
 
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
@@ -108,10 +111,6 @@ void Simulation::MainLoop()
 
 		// render the texture on to the screen with a passthrough (new timestep)
 		// render texture1 (next timestep) to screen
-
-		passthrough.Use();
-
-		passthrough.SetInt(INPUT_UNIFORM, 1);
 
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
@@ -342,7 +341,12 @@ Simulation::Shader::Shader(const char* vertexPath, const char* fragmentPath)
 	glDeleteShader(fragment);
 }
 
-void Simulation::Shader::Shader::Use()
+unsigned int Simulation::Shader::GetId() const
+{
+	return id;
+}
+
+void Simulation::Shader::Shader::Use() const
 {
 	glUseProgram(id);
 }
@@ -362,17 +366,17 @@ void Simulation::Shader::Shader::SetFloat(const std::string& name, float value) 
 	glUniform1f(glGetUniformLocation(id, name.c_str()), value);
 }
 
-void Simulation::Shader::Shader::SetVec4(const std::string& name, float f0, float f1, float f2, float f3)
+void Simulation::Shader::Shader::SetVec4(const std::string& name, float f0, float f1, float f2, float f3) const
 {
 	glUniform4f(glGetUniformLocation(id, name.c_str()), f0, f1, f2, f3);
 }
 
-void Simulation::Shader::Shader::SetVec3(const std::string& name, float f0, float f1, float f2)
+void Simulation::Shader::Shader::SetVec3(const std::string& name, float f0, float f1, float f2) const
 {
 	glUniform3f(glGetUniformLocation(id, name.c_str()), f0, f1, f2);
 }
 
-void Simulation::Shader::Shader::SetVec2(const std::string& name, float f0, float f1)
+void Simulation::Shader::Shader::SetVec2(const std::string& name, float f0, float f1) const
 {
 	glUniform2f(glGetUniformLocation(id, name.c_str()), f0, f1);
 }
@@ -382,12 +386,12 @@ void Simulation::Shader::Shader::SetMat4(const std::string& name, glm::mat4& mat
 	glUniformMatrix4fv(glGetUniformLocation(id, name.c_str()), 1, GL_FALSE, glm::value_ptr(mat));
 }
 
-Simulation::GUIHandler::GUIHandler(GLFWwindow* window, Uniforms& uniforms)
-	: window{window}, uniforms{uniforms}
+Simulation::GUIHandler::GUIHandler(GLFWwindow* window, Uniforms& uniforms, glm::vec3& color)
+	: window{window}, uniforms{uniforms}, color{color}
 {}
 
-Simulation::GUIHandler::GUIHandler(Uniforms & uniforms)
-	: uniforms{uniforms}, window{nullptr}
+Simulation::GUIHandler::GUIHandler(Uniforms & uniforms, glm::vec3& color)
+	: uniforms{uniforms}, window{nullptr}, color{color}
 {}
 
 void Simulation::GUIHandler::Init()
@@ -407,20 +411,54 @@ void Simulation::GUIHandler::RenderStart()
 	ImGui_ImplOpenGL3_NewFrame();
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
+	ImGui::GetIO().IniFilename = nullptr;
+	ImGui::GetIO().LogFilename = nullptr;
 }
 
 void Simulation::GUIHandler::CreateGui()
 {
 	ImGui::Begin("Properties");
-	ImGui::InputFloat("ri", &uniforms.ri, 0.001, 0.1);
-	ImGui::InputFloat("ra", &uniforms.ra, 0.001, 0.1);
-	ImGui::InputFloat("dt", &uniforms.dt, 0.001, 0.1);
-	ImGui::InputFloat("alpha_n", &uniforms.alpha_n, 0.001, 0.1);
-	ImGui::InputFloat("alpha_m", &uniforms.alpha_m, 0.001, 0.1);
-	ImGui::InputFloat("b1", &uniforms.b1, 0.001, 0.1);
-	ImGui::InputFloat("b2", &uniforms.b2, 0.001, 0.1);
-	ImGui::InputFloat("d1", &uniforms.d1, 0.001, 0.1);
-	ImGui::InputFloat("d2", &uniforms.d2, 0.001, 0.1);
+	ImGui::SetWindowSize({ 350, 600 });
+
+	if (ImGui::InputFloat("ri", &uniforms.ri, 0.001, 0.1))
+	{
+		glBufferSubData(GL_UNIFORM_BUFFER, offsetof(Uniforms, ri), sizeof(float), &uniforms.ri);
+	}
+	if (ImGui::InputFloat("ra", &uniforms.ra, 0.001, 0.1))
+	{
+		glBufferSubData(GL_UNIFORM_BUFFER, offsetof(Uniforms, ra), sizeof(float), &uniforms.ra);
+	}
+	if (ImGui::InputFloat("dt", &uniforms.dt, 0.001, 0.1))
+	{
+		glBufferSubData(GL_UNIFORM_BUFFER, offsetof(Uniforms, dt), sizeof(float), &uniforms.dt);
+	}
+	if (ImGui::InputFloat("alpha_n", &uniforms.alpha_n, 0.001, 0.1))
+	{
+		glBufferSubData(GL_UNIFORM_BUFFER, offsetof(Uniforms, alpha_n), sizeof(float), &uniforms.alpha_n);
+	}
+	if (ImGui::InputFloat("alpha_m", &uniforms.alpha_m, 0.001, 0.1))
+	{
+		glBufferSubData(GL_UNIFORM_BUFFER, offsetof(Uniforms, alpha_m), sizeof(float), &uniforms.alpha_m);
+	}
+	if (ImGui::InputFloat("b1", &uniforms.b1, 0.001, 0.1))
+	{
+		glBufferSubData(GL_UNIFORM_BUFFER, offsetof(Uniforms, b1), sizeof(float), &uniforms.b1);
+	}
+	if (ImGui::InputFloat("b2", &uniforms.b2, 0.001, 0.1))
+	{
+		glBufferSubData(GL_UNIFORM_BUFFER, offsetof(Uniforms, b2), sizeof(float), &uniforms.b2);
+	}
+	if (ImGui::InputFloat("d1", &uniforms.d1, 0.001, 0.1))
+	{
+		glBufferSubData(GL_UNIFORM_BUFFER, offsetof(Uniforms, d1), sizeof(float), &uniforms.d1);
+	}
+	if (ImGui::InputFloat("d2", &uniforms.d2, 0.001, 0.1))
+	{
+		glBufferSubData(GL_UNIFORM_BUFFER, offsetof(Uniforms, d2), sizeof(float), &uniforms.d2);
+	}
+	ImGui::NewLine();
+
+	ImGui::ColorPicker3("Color", &(color.x));
 	ImGui::End();
 }
 

@@ -13,24 +13,29 @@ uniform sampler2D textureIn;
 uniform vec2 resolution;
 uniform vec2 invResolution;
 
-uniform float ri; // inner radius
-uniform float ra; // outer radius
+
 
 const float PI = 3.14159265;
 
-uniform float dt;
-
-// width of the step
-uniform float alpha_m;
-uniform float alpha_n;
-
-// birth and death intervals
-// [b1, b2] birth
-// [d1, d2] death
-uniform float b1;
-uniform float b2;
-uniform float d1;
-uniform float d2;
+layout(std140) uniform SimData
+{
+	uniform float ri; // inner radius
+	uniform float ra; // outer radius
+	
+	uniform float dt;
+	
+	// width of the step
+	uniform float alpha_m;
+	uniform float alpha_n;
+	
+	// birth and death intervals
+	// [b1, b2] birth
+	// [d1, d2] death
+	uniform float b1;
+	uniform float b2;
+	uniform float d1;
+	uniform float d2;
+};
 
 // use smooth step sigmoid functions
 
@@ -111,7 +116,7 @@ vec2 convolve(vec2 r)
 	return res;
 }
 
-const vec4 color = vec4(92.0/255.0,176.0/255.0,255.0/255.0,1.0);
+uniform vec3 color;
 
 void main()
 {
@@ -134,5 +139,5 @@ void main()
 	//FragColor = vec4(0.0,n*m,state,state);
 	//FragColor = vec4(state,m,state,state) * color;
 
-	FragColor = vec4(vec3(state) * color.rgb + vec3(f.y) * color.rgb + vec3(f.x) * color.rgb, state);
+	FragColor = vec4(vec3(state) * color + vec3(f.y) * color + vec3(f.x) * color, state);
 }
